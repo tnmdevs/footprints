@@ -1,0 +1,38 @@
+{
+  "name": "tnmdev/footprints",
+  "description": "Request and response footprints",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Saul Chelewani",
+      "email": "saulchelewani@gmail.com"
+    }
+  ],
+  "minimum-stability": "stable",
+  "autoload": {
+    "psr-4": {
+      "TNM\\Footprints\\": "src/",
+      "TNM\\Footprints\\Tests\\": "tests/",
+      "TNM\\Footprints\\Database\\Factories\\": "database/factories/"
+    }
+  },
+  "require": {
+    "php": "8.1"
+  },
+  "require-dev": {
+    "orchestra/testbench": "^7.0",
+    "phpunit/phpunit": "^9.5"
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "TNM\\Footprints\\FootprintServiceProvider"
+      ]
+    }
+  },
+  "scripts": {
+    "test": "vendor/bin/phpunit",
+    "test-f": "vendor/bin/phpunit --filter"
+  }
+}
