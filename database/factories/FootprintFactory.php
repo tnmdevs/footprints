@@ -18,6 +18,7 @@ class FootprintFactory extends Factory
             'method' => fake()->randomElement(['post', 'get']),
             'milliseconds' => microtime(true) * 1000 - $startTime,
             'status' => 200,
+            'success' => true
         ];
     }
 
