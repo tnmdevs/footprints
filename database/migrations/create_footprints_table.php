@@ -25,6 +25,7 @@ class CreateFootprintsTable extends Migration
             $table->text('response')->nullable();
             $table->integer('milliseconds');
             $table->integer('status');
+            $table->boolean('success');
             $table->string('message')->nullable();
             $table->timestamps();
         });
