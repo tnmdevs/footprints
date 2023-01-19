@@ -27,7 +27,7 @@
   "extra": {
     "laravel": {
       "providers": [
-        "TNM\\Footprints\\FootprintServiceProvider"
+        "TNM\\Footprints\\Providers\\FootprintServiceProvider"
       ]
     }
   },
