@@ -32,7 +32,7 @@ class WriteFootprints
 
     private function getHiddenFields(): array
     {
-        return ['password', 'pin', 'new_pin'];
+        return explode(',', config('footprints.hidden_fields'));
     }
 
     private function getTurnAroundTime(): float|int
