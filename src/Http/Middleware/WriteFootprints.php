@@ -37,6 +37,6 @@ class WriteFootprints
 
     private function getTurnAroundTime(): float|int
     {
-        return round(microtime(true) - LARAVEL_START, 4) * 1000;
+        return round(round(microtime(true) - LARAVEL_START, 4) * 1000);
     }
 }
