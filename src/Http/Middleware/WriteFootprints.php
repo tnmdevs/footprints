@@ -21,6 +21,7 @@ class WriteFootprints
             'endpoint' => $request->route() ? $request->route()->uri : '',
             'uri' => $request->getRequestUri(),
             'method' => $request->method(),
+            'ip_address' => $request->ip(),
             'request' => json_encode($request->except($this->getHiddenFields())),
             'content' => $request->getContent(),
             'response' => method_exists($response, 'content') ? $response->content() : null,
