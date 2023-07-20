@@ -20,7 +20,7 @@ class WriteFootprints
         Footprint::create([
             'endpoint' => $request->route() ? $request->route()->uri : '',
             'uri' => $request->getRequestUri(),
-            'user_type' => get_class($request->user()),
+            'user_type' => $request->user() ? get_class($request->user()) : null,
             'user_id' => auth()?->id(),
             'method' => $request->method(),
             'ip_address' => $request->ip(),
