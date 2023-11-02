@@ -24,13 +24,27 @@ class WriteFootprints
             'user_id' => auth()?->id(),
             'method' => $request->method(),
             'ip_address' => $request->ip(),
-            'request' => json_encode($request->except($this->getHiddenFields())),
-            'content' => $request->getContent(),
+            'request' => json_encode($this->maskHiddenFields($request->all())),
+            'request_headers' => json_encode($request->headers->all()),
+            'content' => empty($request->all()) ? $request->getContent() : null,
             'response' => method_exists($response, 'content') ? $response->content() : null,
             'milliseconds' => $this->getTurnAroundTime(),
             'status' => method_exists($response, 'status') ? $response->status() : null,
             'success' => $response->isSuccessful(),
         ]);
+    }
+
+    private function maskHiddenFields(array $request): array
+    {
+        $hiddenFields = $this->getHiddenFields();
+        $mask = [];
+        foreach ($request as $key => $value) {
+            if (in_array($key, $hiddenFields,)) {
+                $value = '{{secret}}';
+            }
+            $mask[$key] = $value;
+        }
+        return $mask;
     }
 
     private function getHiddenFields(): array

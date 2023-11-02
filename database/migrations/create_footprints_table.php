@@ -22,6 +22,7 @@ class CreateFootprintsTable extends Migration
             $table->string('method');
             $table->ipAddress()->nullable();
             $table->text('content')->nullable();
+            $table->text('request_headers')->nullable();
             $table->text('request')->nullable();
             $table->text('response')->nullable();
             $table->integer('milliseconds');
