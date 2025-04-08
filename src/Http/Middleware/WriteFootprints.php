@@ -20,16 +20,18 @@ class WriteFootprints
 
     public function terminate(Request $request, Response $response): void
     {
-        if (config('footprints.log_footprints_to_file') === false) {
+        $channels = explode(',', config('footprints.log_channels'));
+
+        if (in_array('database', $channels)) {
             Footprint::create($this->getFootprint($request, $response));
-            return;
         }
 
-        Log::channel('stack')->info(
-            'Footprint Data',
-            $this->getFootprint($request, $response)
-        );
-
+        if (in_array('file', $channels)) {
+            Log::channel('footprint_stack')->info(
+                'Footprint Data',
+                $this->getFootprint($request, $response)
+            );
+        }
     }
 
     private function maskHiddenFields(array $request): array
@@ -65,7 +67,6 @@ class WriteFootprints
             'method' => $request->method(),
             'ip_address' => $request->ip(),
             'request' => json_encode($this->maskHiddenFields($request->all())),
-            'request_headers' => json_encode($request->headers->all()),
             'content' => empty($request->all()) ? $request->getContent() : null,
             'response' => method_exists($response, 'content') ? $response->content() : null,
             'milliseconds' => $this->getTurnAroundTime(),
