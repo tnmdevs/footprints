@@ -20,7 +20,7 @@ class WriteFootprints
 
     public function terminate(Request $request, Response $response): void
     {
-        $channels = explode(',', config('footprints.log_channels'));
+        $channels = explode(',', env('FOOTPRINT_LOG_CHANNELS', 'database'));
 
         if (in_array('database', $channels)) {
             Footprint::create($this->getFootprint($request, $response));
