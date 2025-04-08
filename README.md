@@ -9,7 +9,7 @@ composer require elasticsearch/elasticsearch monolog/monolog
 Add the following environment variables:
 
 ```env
-ES_SCHEME=https
+ES_SCHEME=http
 ES_USERNAME=your_username
 ES_PASSWORD=your_password
 ES_NODES=<HOST IP/NAME>
