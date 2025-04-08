@@ -4,7 +4,6 @@ namespace TNM\Footprints\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 use TNM\Footprints\Models\Footprint;
 
@@ -18,7 +17,7 @@ class WriteFootprints
         return $next($request);
     }
 
-    public function terminate(Request $request, Response $response): void
+    public function terminate(Request $request, $response): void
     {
         $channels = explode(',', env('FOOTPRINT_LOG_CHANNELS', 'database'));
 
@@ -57,7 +56,7 @@ class WriteFootprints
         return round(round(microtime(true) - LARAVEL_START, 4) * 1000);
     }
 
-    private function getFootprint(Request $request, Response $response): array
+    private function getFootprint(Request $request, $response): array
     {
         return [
             'endpoint' => $request->route() ? $request->route()->uri : '',
