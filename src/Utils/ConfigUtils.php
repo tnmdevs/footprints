@@ -15,11 +15,11 @@ final class ConfigUtils
     {
         $client = ClientBuilder::create()
             ->setHosts([
-                env('ES_SCHEME') . '://' .
-                env('ES_USERNAME') . ':' .
-                env('ES_PASSWORD') . '@' .
-                env('ES_NODES') . ':' .
-                env('ES_PORT'),
+                env('ES_SCHEME', 'http') . '://' .
+                env('ES_USERNAME', 'elastic') . ':' .
+                env('ES_PASSWORD', 'changeme') . '@' .
+                env('ES_NODES', 'localhost') . ':' .
+                env('ES_PORT', 9200),
             ])
             ->build();
 
