@@ -32,7 +32,8 @@ class WriteFootprints
             $context['host_ip'] = $_SERVER['SERVER_ADDR']
                 ?? $_SERVER['LOCAL_ADDR']
                 ?? gethostbyname($context['host_name']);
-
+            $context['server_ip'] = gethostbyname($context['host_name']);
+            
             Log::channel('footprint_stack')->info(
                 'Footprint Data',
                 $context
