@@ -27,13 +27,15 @@ class WriteFootprints
 
         if (in_array('file', $channels)) {
             $context = $this->getFootprint($request, $response);
+
             $context['user_agent'] = $request->userAgent();
+
             $context['host_name'] = gethostname();
+
             $context['host_ip'] = $_SERVER['SERVER_ADDR']
                 ?? $_SERVER['LOCAL_ADDR']
                 ?? gethostbyname($context['host_name']);
-            $context['server_ip'] = gethostbyname($context['host_name']);
-            
+
             Log::channel('footprint_stack')->info(
                 'Footprint Data',
                 $context
