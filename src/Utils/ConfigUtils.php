@@ -2,8 +2,8 @@
 namespace TNM\Footprints\Utils;
 
 use Elastic\Elasticsearch\ClientBuilder;
-use Monolog\Handler\ElasticsearchHandler;
 use Monolog\Formatter\ElasticsearchFormatter;
+use TNM\Footprints\Logging\ElasticsearchHandler;
 
 final class ConfigUtils
 {
