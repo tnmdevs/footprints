@@ -34,6 +34,10 @@ final class ConfigUtils
             ],
             'handler_with' => [
                 'client' => $client,
+                'options' => [
+                    'ignore_error' => true,
+                    'op_type' => env('ES_OPERATION_TYPE', 'index'),
+                ]
             ],
         ];
     }
