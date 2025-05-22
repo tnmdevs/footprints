@@ -2,8 +2,8 @@
 namespace TNM\Footprints\Utils;
 
 use Elastic\Elasticsearch\ClientBuilder;
-use Monolog\Handler\ElasticsearchHandler;
 use Monolog\Formatter\ElasticsearchFormatter;
+use TNM\Footprints\Logging\ElasticsearchHandler;
 
 final class ConfigUtils
 {
@@ -34,6 +34,10 @@ final class ConfigUtils
             ],
             'handler_with' => [
                 'client' => $client,
+                'options' => [
+                    'ignore_error' => true,
+                    'op_type' => env('ES_OPERATION_TYPE', 'index'),
+                ]
             ],
         ];
     }
