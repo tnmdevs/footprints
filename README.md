@@ -1,20 +1,36 @@
 # Footprints
 
-An asynchronous request/response logging package for Laravel applications. Capture detailed "footprints" of every
-interaction with your API or web application without impacting performance.
+[![Latest Version](https://img.shields.io/packagist/v/tnmdev/footprints.svg?style=flat-square)](https://packagist.org/packages/tnmdev/footprints)
+[![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE)
+[![PHP Version](https://img.shields.io/badge/php-%5E8.2-blue.svg?style=flat-square)](composer.json)
+[![Laravel](https://img.shields.io/badge/laravel-%5E9.0%20%7C%20%5E10.0%20%7C%20%5E11.0%20%7C%20%5E12.0%20%7C%20%5E13.0-orange.svg?style=flat-square)](composer.json)
+
+**Footprints** is an asynchronous HTTP request and response logging package for Laravel applications. It captures comprehensive request/response lifecycle metadata and dispatches background queue jobs to publish footprints to an Apache Kafka topic, with an automated fallback to database persistence if Kafka is unavailable or misconfigured.
+
+---
 
 ## Features
 
-- **Asynchronous Processing**: Uses Laravel Jobs to offload logging, ensuring zero latency impact on user requests.
-- **Multiple Channels**: Log to Database, Kafka, or Elasticsearch.
-- **Sensitive Data Masking**: Automatically redact passwords, credit cards, and other sensitive fields.
-- **Request ID Tracking**: Generates and propagates unique `X-Request-ID` headers for tracing across microservices.
+- **Non-Blocking / Asynchronous Logging**: Request data capture occurs during the request termination phase and is dispatched to a background queue, ensuring zero latency impact on HTTP responses.
+- **Apache Kafka Integration**: Native streaming of request footprints to Kafka topics via `ext-rdkafka`.
+- **Automated Database Fallback**: If Kafka brokers are unreachable, credentials fail, or publishing throws an error, the queue worker automatically logs the footprint directly into your database.
+- **Sensitive Data Redaction**: Automatically redacts sensitive fields (passwords, PINs, tokens, credit cards, etc.) across request bodies and headers. Supports nested structures and kebab-case/snake_case keys.
+- **Binary/Stream Protection**: Detects non-text payloads (file downloads, binary streams) to avoid bloating logs.
+
+---
+
+## Requirements
+
+- **PHP**: `^8.2`
+- **Laravel**: `^9.0`, `^10.0`, `^11.0`, `^12.0`, or `^13.0`
+- **PHP Extension**: `ext-rdkafka` (required for Kafka event streaming)
+- A configured Laravel queue worker (e.g., Redis, Database, RabbitMQ, SQS)
+
+---
 
 ## Installation
 
-1. **pull from GitHub:**
-
-Configure `composer.json`:
+### 1. Configure `composer.json`:
 ```json
   {
   "repositories": [
@@ -29,315 +45,253 @@ Configure `composer.json`:
   },
 }
 ```
+and then install via composer:
+```bash
+composer require tnmdev/footprints
+```
 
-2. **Publish Configuration:**
+### 2. Publish Configuration & Migration
+
+Publish the configuration file:
 
 ```bash
 php artisan vendor:publish --tag=footprints-config
 ```
 
-3. **Publish Migrations (Optional):**
-
-   By default, migrations are autoloaded from the package. If you want to copy them to your `database/migrations` directory for customization:
+Publish the database migration (used for fallback logging):
 
 ```bash
 php artisan vendor:publish --tag=footprints-migrations
 ```
 
-Run Migrations:
+> The publisher automatically generates a timestamped migration file in `database/migrations/`. If you do not publish the migration, the package will register and load the migration from its internal package directory automatically.
 
-   ```bash
-   php artisan migrate
-   ```
-   *This will create the `footprints` table if you plan to use the database driver.*
+### 3. Run Migrations
+
+```bash
+php artisan migrate
+```
 
 ---
 
 ## Configuration
 
-The package behavior is controlled via environment variables in your `.env` file.
+The configuration file is published to `config/footprints.php`. The package can be configured via this file or via environment variables.
 
-### Basic Setup
 
-```env
-# Enable or Disable logging globally
+### Environment Variables (.env) Reference
+
+Add the following environment variables to your `.env` file as needed:
+
+```dotenv
+# General Settings
 FOOTPRINTS_ENABLED=true
-
-FOOTPRINT_SERVICE_NAME=my-laravel-app
-
-# Where to log? Options: database, kafka, elasticsearch
-# Comma-separated for multiple channels. Order matters here
-FOOTPRINTS_CHANNELS=database,kafka
-```
-
-### Sensitive Data Masking
-
-Define which fields should be redacted from the request body logs.
-
-```env
-FOOTPRINTS_HIDDEN_FIELDS=password,password_confirmation,credit_card,api_key,secret,pin
-```
-
-### Queue Configuration
-
-Since logging happens in the background, configure which queue to use.
-
-```env
-FOOTPRINTS_QUEUE_CONNECTION=database
-FOOTPRINTS_QUEUE_NAME=logging
-```
-
-> **Important**: You must start a queue worker to process the logging jobs. Without a running queue worker, footprints
-> will be queued but not processed.
-
-#### Starting the Queue Worker
-
-Start a queue worker using Laravel's queue command:
-
-```bash
-php artisan queue:work
-```
-
-For production, you should run the queue worker as a background process or use a process manager like Supervisor. To
-specify the connection and queue name that match your configuration:
-
-```bash
-php artisan queue:work database --queue=logging
-```
-
-Alternatively, for development, you can use `queue:listen` to reflect code changes immediately:
-
-```bash
-php artisan queue:listen database --queue=logging
-```
-
-Replace `database` and `logging` with the values from your `.env` file (`FOOTPRINTS_QUEUE_CONNECTION` and
-`FOOTPRINTS_QUEUE_NAME`).
-
-**Note**: If you're using the `sync` queue connection for development/testing, jobs will run immediately without a queue
-worker, but this is not recommended for production as it will impact request performance.
-
-**Recommendation**: For high-volume APIs or web applications, it is highly recommended to use Redis or RabbitMQ as your
-queue connection. Using the database driver for queues in high-traffic scenarios can overwhelm your database with
-insert/delete operations for managing jobs, potentially degrading overall application performance.
-
-## Driver Specific Configuration
-
-### Database Driver
-
-Uses your default Laravel database connection by default.
-
-```env
-DB_CONNECTION=mysql
-FOOTPRINTS_TABLE_NAME=footprints
-```
-
-### Kafka Driver
-
-#### Prerequisites
-
-This driver requires the `rdkafka` PHP extension. Please refer to the [official installation instructions](https://www.google.com/search?q=https://github.com/arnaud-lb/php-rdkafka%23installation) to set it up in
-your environment.
-
-#### Required Configuration
-
-These variables are mandatory for the Kafka driver to function.
-
-```env
-KAFKA_BROKERS=localhost:9092
-KAFKA_TOPIC=app_footprints
-```
-
-#### Optional Configuration
-
-These variables provide additional control but have sensible defaults or are not strictly necessary.
-
-```env
-KAFKA_CLIENT_ID=my-app-logger
-KAFKA_TIMEOUT_MS=1000
-KAFKA_MESSAGE_KEY=request_id
-```
-
-**Message Key Configuration**:
-
-- `KAFKA_MESSAGE_KEY`: Optional. Set to a field name (e.g., `request_id`) to use that field's value as the message key,
-  or leave unset/null for no key.
-- For custom key generation functions, set directly in `config/footprints.php`.
-- Generated keys are validated to ensure they don't exceed 512 characters.
-
-#### Authentication Configuration
-
-If your Kafka broker requires authentication, you must provide the credentials.
-
-> **Important**: If you provide a `KAFKA_SASL_USERNAME`, you must also provide the `PASSWORD`, `MECHANISM`, and
-`PROTOCOL`.
-
-```env
-KAFKA_SASL_USERNAME=your-username
-KAFKA_SASL_PASSWORD=your-password
-KAFKA_SASL_MECHANISM=SCRAM-SHA-256   # Required if username is set
-KAFKA_SECURITY_PROTOCOL=SASL_SSL     # Required if username is set
-```
-
-### Elasticsearch Driver
-
-#### Prerequisites
-
-This driver requires the `elasticsearch/elasticsearch` PHP client. You can install it via Composer using the [official
-installation instructions](https://www.elastic.co/guide/en/elasticsearch/client/php-api/current/installation.html) or by running:
-
-```bash
-composer require elasticsearch/elasticsearch
-```
-
-#### Required Configuration
-
-These variables are mandatory.
-
-```env
-ELASTICSEARCH_HOSTS=localhost:9200
-ELASTICSEARCH_INDEX=footprints_logs
-ELASTICSEARCH_OPERATION_TYPE=index   # 'index' (default) or 'create'
-```
-
-#### Optional Configuration
-
-```env
-ELASTICSEARCH_DOCUMENT_ID_FIELD=request_id
-```
-
-**Document ID**:
-
-- `ELASTICSEARCH_DOCUMENT_ID_FIELD`: Field name from footprint to use as document ID (default: `request_id`).
-- Generated IDs are validated to ensure they don't exceed 512 characters.
-
-#### Authentication Configuration
-
-You must choose one authentication method. Do not configure both.
-
-**Option A: Basic Authentication (Username & Password)**
-Use this if your cluster uses standard user credentials.
-
-```env
-ELASTICSEARCH_USERNAME=elastic
-ELASTICSEARCH_PASSWORD=changeme
-```
-
-**Option B: API Key**
-Use this if you have generated an API Key for access.
-
-```env
-ELASTICSEARCH_API_KEY=your-api-key-here
-```
-
-## Environment Variables Overview
-
-Here's a complete overview of all environment variables the package expects:
-
-```env
-# Basic Configuration
-FOOTPRINTS_ENABLED=true
-FOOTPRINT_SERVICE_NAME=my-laravel-app
-FOOTPRINTS_CHANNELS=database,kafka
-
-# Sensitive Data Masking
-FOOTPRINTS_HIDDEN_FIELDS=password,password_confirmation,credit_card,api_key,secret,pin
+FOOTPRINTS_APPLICATION_NAME=my-service-api
+FOOTPRINTS_TABLE_NAME=application_footprints
 
 # Queue Configuration
-FOOTPRINTS_QUEUE_CONNECTION=database
+FOOTPRINTS_QUEUE_CONNECTION=redis
 FOOTPRINTS_QUEUE_NAME=logging
 
-# Database Driver (if using database channel)
-DB_CONNECTION=mysql
-FOOTPRINTS_TABLE_NAME=footprints
+# Sensitive Data Redaction (comma-separated)
+FOOTPRINTS_HIDDEN_FIELDS=cookie,password,password_confirmation,new_pin,pin,credit_card,api_key,token,authorization
 
-# Kafka Driver (if using kafka channel)
-KAFKA_BROKERS=localhost:9092
-KAFKA_TOPIC=app_footprints
-KAFKA_CLIENT_ID=my-app-logger
-KAFKA_TIMEOUT_MS=1000
-KAFKA_MESSAGE_KEY=request_id
-# Kafka Auth (Only if needed)
-KAFKA_SASL_MECHANISM=SCRAM-SHA-256
-KAFKA_SECURITY_PROTOCOL=SASL_SSL
-KAFKA_SASL_USERNAME=your-username
-KAFKA_SASL_PASSWORD=your-password
+# Kafka Broker Configuration (brokers are comma-separated)
+FOOTPRINTS_KAFKA_BROKERS=127.0.0.1:9092,127.0.0.1:9093
+FOOTPRINTS_KAFKA_TOPIC=application_footprints
+FOOTPRINTS_KAFKA_CLIENT_ID=my_app_footprints
+FOOTPRINTS_KAFKA_TIMEOUT_MS=1000
 
-# Elasticsearch Driver (if using elasticsearch channel)
-ELASTICSEARCH_HOSTS=localhost:9200
-ELASTICSEARCH_INDEX=footprints_logs
-ELASTICSEARCH_OPERATION_TYPE=index
-ELASTICSEARCH_DOCUMENT_ID_FIELD=request_id
-# Elasticsearch Auth (Choose ONE)
-ELASTICSEARCH_USERNAME=elastic
-ELASTICSEARCH_PASSWORD=changeme
-ELASTICSEARCH_API_KEY=your-api-key-here
+# Kafka SASL Authentication (Optional)
+FOOTPRINTS_KAFKA_SECURITY_PROTOCOL=SASL_PLAINTEXT
+FOOTPRINTS_KAFKA_SASL_MECHANISM=PLAIN
+FOOTPRINTS_KAFKA_SASL_USERNAME=your_username
+FOOTPRINTS_KAFKA_SASL_PASSWORD=your_password
 ```
 
-## Usage
+---
 
-To start capturing footprints, simply register the middleware.
+## Usage & Middleware Registration
 
-### Global Usage (All Routes)
+To start capturing request and response footprints, apply the middleware to your routes or middleware pipeline. The package automatically registers the middleware alias `footprints`.
 
-Add the middleware to the `web` or `api` middleware groups in `app/Http/Kernel.php` (Laravel 10-) or
-`bootstrap/app.php` (Laravel 11+).
+### Laravel 11 and Newer (`bootstrap/app.php`)
 
-**Laravel 10 & below (`app/Http/Kernel.php`)**:
+#### Global / Group Registration:
+
+```php
+use TNM\Footprints\Http\Middleware\FootprintMiddleware;
+
+return Application::configure(basePath: dirname(__DIR__))
+    ->withRouting(
+        web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
+        commands: __DIR__.'/../routes/console.php',
+        health: '/up',
+    )
+    ->withMiddleware(function (Middleware $middleware) {
+        // Append globally to all requests
+        $middleware->append(FootprintMiddleware::class);
+
+        // Or append to API group only
+        $middleware->api(append: [
+            FootprintMiddleware::class,
+        ]);
+    })
+    // ...
+```
+
+### Laravel 9 & 10 (`app/Http/Kernel.php`)
+
+#### Global or Route Group:
 
 ```php
 protected $middlewareGroups = [
     'api' => [
         // ...
-        \TNM\Footprints\Http\Middleware\CaptureFootprintsMiddleware::class,
+        \TNM\Footprints\Http\Middleware\FootprintMiddleware::class,
     ],
 ];
 ```
 
-**Laravel 11+ (`bootstrap/app.php`)**:
+### Route-Specific Usage
+
+You can use the alias `'footprints'` directly on route groups or single routes:
 
 ```php
-->withMiddleware(function (Middleware $middleware) {
-    $middleware->append(\TNM\Footprints\Http\Middleware\CaptureFootprintsMiddleware::class);
-})
-```
+use Illuminate\Support\Facades\Route;
 
-### Route Specific Usage
-
-You can also apply it to specific routes:
-
-```php
-Route::middleware('footprints')->group(function () {
-    Route::post('/orders', [OrderController::class, 'store']);
+Route::middleware(['footprints'])->group(function () {
+    Route::post('/api/checkout', [CheckoutController::class, 'process']);
+    Route::resource('/api/orders', OrderController::class);
 });
 ```
 
+---
+
+## How It Works
+
+```
+                        HTTP Request
+                             │
+                             ▼
+               ┌───────────────────────────┐
+               │    FootprintMiddleware    │
+               │   (handle: pass request)  │
+               └─────────────┬─────────────┘
+                             │
+                             ▼
+                    Application Logic
+                             │
+                             ▼
+               ┌───────────────────────────┐
+               │    FootprintMiddleware    │
+               │   (terminate: collect)    │
+               └─────────────┬─────────────┘
+                             │
+                  Dispatches FootprintWorker
+                             │
+                             ▼
+                    [ Laravel Queue ]
+                             │
+                             ▼
+               ┌───────────────────────────┐
+               │      FootprintWorker      │
+               └─────────────┬─────────────┘
+                             │
+             Attempts Kafka Produce
+                             │
+             ┌───────────────┴───────────────┐
+             │                               │
+        [ Success ]                     [ Failure ]
+             │                               │
+             ▼                               ▼
+       Apache Kafka                  Direct DB Insert
+          Topic                  (`application_footprints`)
+```
+> If Kafka is unreachable, misconfigured, or the RdKafka extension is not loaded, the job catches the error and writes the footprint directly into the database.
+
+---
+
+## Kafka Configuration & Keys
+
+### Supported Security Protocols & SASL Mechanisms
+
+- **Security Protocols**: `PLAINTEXT`, `SSL`, `SASL_PLAINTEXT`, `SASL_SSL`
+- **SASL Mechanisms**: `PLAIN`, `GSSAPI`, `SCRAM-SHA-256`, `SCRAM-SHA-512`, `OAUTHBEARER`
+
+Broker addresses can be IPv4 or IPv6, including ports (e.g., `127.0.0.1:9092`, `kafka.service.internal:9093`, `[::1]:9092`).
+
+### Custom Partition Message Key
+
+By default, message keys sent to Kafka are generated using `TNM\Footprints\Utils\getDefaultEventKey()` in the format:
+
+```
+footprint:{METHOD}:{UUID_PREFIX_8}:{YmdHis}
+# Example: footprint:POST:a3f1c99b:20260906124500
+```
+
+To define a custom key (e.g., partitioning by `request_id` or `user_id`), define a callback or closure in `config/footprints.php`:
+
+```php
+'kafka' => [
+    // ...
+    'message_key_func' => function (array $footprint) {
+        return $footprint['request_id'] ?? $footprint['user_id'] ?? 'default_key';
+    },
+],
+```
+
+---
+
 ## Data Structure
 
-The `footprints` table (or JSON object) contains:
+Every footprint contains the following fields:
 
-| Field           | Description                                                                    |
-|:----------------|:-------------------------------------------------------------------------------|
-| `request_id`    | Unique UUID for the request (Header: `X-Request-ID`).                          |
-| `service_name`  | Name of the service/application (from `FOOTPRINT_SERVICE_NAME` or `APP_NAME`). |
-| `user_id`       | Authenticated User ID (if any).                                                |
-| `method`        | HTTP Method (GET, POST, etc.).                                                 |
-| `uri`           | The request path (e.g., `/api/users`).                                         |
-| `ip_address`    | Client IP.                                                                     |
-| `status_code`   | HTTP Response code (200, 404, 500).                                            |
-| `duration_ms`   | Execution time in milliseconds.                                                |
-| `request_body`  | JSON payload (sensitive fields redacted).                                      |
-| `response_body` | Response content (truncated/handled if binary).                                |
-| `environment`   | Application environment (e.g., local, production).                             |
+| Field | Type | Description |
+|---|---|---|
+| `request_id` | `string` | Extracted from `x-request-id`, `request-id`, `id`, or `requestid` headers. |
+| `app_name` | `string` | Name of the application/microservice (from config `app_name`). |
+| `app_environment` | `string` | Environment name (e.g. `production`, `staging`, `local`). |
+| `request_method` | `string` | HTTP Verb (e.g. `GET`, `POST`, `PUT`, `DELETE`). |
+| `request_uri` | `string` | The URI path (e.g. `api/v1/orders`). |
+| `request_url` | `string` | The full URL including scheme, host, and query string. |
+| `request_time` | `string` | ISO 8601 UTC timestamp of the request start. |
+| `request_headers` | `array` / `json` | Associative array of request headers with sensitive headers masked. |
+| `request_body` | `array` / `json` | Cleaned and masked request input parameters. Uploaded files appear as `[File: filename]`. |
+| `response_status_code` | `int` | HTTP response status code (e.g. `200`, `404`, `500`). |
+| `response_success` | `bool` | Boolean status indicating whether the response status code is 2xx. |
+| `response_headers` | `array` / `json` | Headers returned with the HTTP response. |
+| `response_body` | `string` | Response payload content (binary/stream responses are replaced with `(binary/stream content)`). |
+| `duration_ms` | `float` | Request round-trip execution duration in milliseconds. |
+| `client_ip` | `string` | Client IP address. |
+| `host_ip` | `string` | Server host IP address. |
+| `host_name` | `string` | Server hostname. |
+| `user_id` | `string` / `null` | Primary identifier of the authenticated user. |
+| `user_type` | `string` / `null` | Fully-qualified class name of the authenticated user model. |
+| `exception_message` | `string` / `null` | Exception message if an error occurred during request processing or fallback reason. |
 
-## Testing
+---
 
-The package comes with a comprehensive test suite.
+## Queue Workers
+
+Because footprint logging jobs are queued asynchronously, ensure that your queue workers are running:
 
 ```bash
-composer test
+# Process jobs on the configured connection and queue
+php artisan queue:work redis --queue=logging
 ```
+
+For production, manage your queue workers using a process supervisor like [Supervisor](http://supervisord.org/) or [Laravel Horizon](https://laravel.com/docs/horizon) (for Redis).
+
+---
+
+## Contributing
+
+Pull requests and issues are welcome! Please ensure all code conforms to PSR-12 and tests pass before submitting changes.
+
+---
 
 ## License
 
-The MIT License (MIT). Please see [License File](LICENSE) for more information.
+This package is open-sourced software licensed under the [MIT license](LICENSE).

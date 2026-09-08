@@ -1,12 +1,15 @@
 {
   "name": "tnmdev/footprints",
-  "description": "An asynchronous request/response logging package for Laravel applications.",
+  "description": "An asynchronous request/response package for Laravel applications that publishes the footprint to a kafka topic.",
   "type": "library",
   "license": "MIT",
   "autoload": {
     "psr-4": {
       "TNM\\Footprints\\": "src/"
-    }
+    },
+    "files": [
+      "src/Utils/Utils.php"
+    ]
   },
   "authors": [
     {
@@ -21,12 +24,13 @@
   "minimum-stability": "stable",
   "require": {
     "php": "^8.2",
-    "illuminate/support": "^9.0|^10.0|^11.0|^12.0",
-    "illuminate/queue": "^9.0|^10.0|^11.0|^12.0",
-    "illuminate/routing": "^9.0|^10.0|^11.0|^12.0"
+    "ext-rdkafka": "*",
+    "illuminate/support": "^9.0|^10.0|^11.0|^12.0|^13.0",
+    "illuminate/queue": "^9.0|^10.0|^11.0|^12.0|^13.0",
+    "illuminate/routing": "^9.0|^10.0|^11.0|^12.0|^13.0"
   },
   "suggest": {
-    "ext-rdkafka": "Required for Kafka logging channel"
+    "ext-rdkafka": "Required for Kafka footprint event publishing."
   },
   "require-dev": {
     "orchestra/testbench": "^7.0|^8.0|^9.0|^10.0",
@@ -44,7 +48,7 @@
   "extra": {
     "laravel": {
       "providers": [
-        "TNM\\Footprints\\Providers\\FootprintServiceProvider"
+        "TNM\\Footprints\\Providers\\ServiceProvider"
       ]
     }
   }

@@ -1,106 +1,83 @@
 <?php
 
 return [
-
     /*
     |--------------------------------------------------------------------------
-    | Enable/Disable Footprints
+    | Enable Footprints
     |--------------------------------------------------------------------------
-    |
-    | Master switch to enable or disable the logging globally.
-    |
+    | Master toggle for footprint capturing. When set to false, the middleware
+    | skips data collection and job dispatching entirely.
     */
     'enabled' => env('FOOTPRINTS_ENABLED', true),
 
     /*
     |--------------------------------------------------------------------------
-    | Service Identification
+    | Application Identifier
     |--------------------------------------------------------------------------
-    | The name of this application as it should for unique identification.
+    | Identifies this service/application in footprint payloads and database records.
     */
-    'service_name' => env('FOOTPRINT_SERVICE_NAME', env('APP_NAME', 'laravel-app')),
+    'app_name' => env('FOOTPRINTS_APPLICATION_NAME', env('APP_NAME', 'unnamed-laravel-app')),
 
     /*
     |--------------------------------------------------------------------------
     | Queue Configuration
     |--------------------------------------------------------------------------
-    |
-    | The queue connection and name to use for the background logging job.
-    |
+    | The queue connection and queue name to which FootprintWorker jobs are sent. Defaults to the app's queue.
     */
     'queue' => [
-        'connection' => env('FOOTPRINTS_QUEUE_CONNECTION', 'database'),
+        'connection' => env('FOOTPRINTS_QUEUE_CONNECTION', env('QUEUE_CONNECTION', 'database')),
         'queue' => env('FOOTPRINTS_QUEUE_NAME', 'default'),
     ],
 
     /*
     |--------------------------------------------------------------------------
-    | Active Channels & Order
+    | Redacted / Masked Fields
     |--------------------------------------------------------------------------
-    |
-    | Specify which channels to log to and in what order.
-    | Available drivers: 'file', 'database', 'kafka', 'elasticsearch'
-    |
+    | Comma-separated list of field names that should be replaced with '[REDACTED]'.
+    | Applies recursively to request headers and JSON/form-data request bodies.
     */
-    'channels' => env("FOOTPRINTS_CHANNELS", "file"),
+    'mask_fields' => env(
+        'FOOTPRINTS_HIDDEN_FIELDS',
+        'password,password_confirmation,new_pin,pin,credit_card,api_key,token,cookie,set-cookie'
+    ),
 
     /*
     |--------------------------------------------------------------------------
-    | Sensitive Data Masking
+    | Database Table Name
     |--------------------------------------------------------------------------
-    |
-    | specific fields in the request body to hide.
-    |
+    | Target database table for fallback logging and migrations.
     */
-    'mask_fields' => env("FOOTPRINTS_HIDDEN_FIELDS",
-        "password,password_confirmation,new_pin,pin,credit_card,api_key"),
+    'table_name' => env('FOOTPRINTS_TABLE_NAME', 'application_footprints'),
 
     /*
     |--------------------------------------------------------------------------
-    | Channel Configurations
+    | Kafka Driver Settings
     |--------------------------------------------------------------------------
     */
-    'drivers' => [
-        'file' => [
-            'path' => env('FOOTPRINTS_FILE_PATH', storage_path('logs/footprints.log')),
-            'min_free_space_mb' => env('FOOTPRINTS_FILE_MIN_FREE_SPACE_MB', 100),
-        ],
+    'kafka' => [
+        // Comma-separated broker list, e.g. "kafka1:9092,kafka2:9092"
+        'brokers' => env('FOOTPRINTS_KAFKA_BROKERS'),
 
-        'database' => [
-            'table_name' => env('FOOTPRINTS_TABLE_NAME', 'footprints'),
-            'connection' => env('DB_CONNECTION', 'mysql'),
-        ],
+        // Target Kafka topic
+        'topic' => env('FOOTPRINTS_KAFKA_TOPIC', 'application_footprints'),
 
-        'kafka' => [
-            'brokers' => env('KAFKA_BROKERS', 'localhost:9092'),
-            'topic' => env('KAFKA_TOPIC', 'app_footprints'),
-            'client_id' => env('KAFKA_CLIENT_ID', 'laravel_logger'),
-            'timeout_ms' => env('KAFKA_TIMEOUT_MS', 1000),
-            'sasl_mechanism' => env('KAFKA_SASL_MECHANISM'),
-            'security_protocol' => env('KAFKA_SECURITY_PROTOCOL'),
-            'sasl_username' => env('KAFKA_SASL_USERNAME'),
-            'sasl_password' => env('KAFKA_SASL_PASSWORD'),
-            // Message key: null (no key), string (field name from footprint), or callable
-            // Set to null to disable message keys, or a field name like 'request_id'
-            // For callable functions, set directly in config file (not via env):
-            // 'message_key' => function($footprint) { return $footprint['request_id']; }
-            'message_key' => env('KAFKA_MESSAGE_KEY', null),
-        ],
+        // Client ID sent to the broker
+        'client_id' => env('FOOTPRINTS_KAFKA_CLIENT_ID', 'laravel_logger'),
 
-        'elasticsearch' => [
-            'hosts' => explode(',', env('ELASTICSEARCH_HOSTS', 'localhost:9200')),
-            'index' => env('ELASTICSEARCH_INDEX', 'footprints_logs'),
-            // Authentication: username/password or API key (use one or the other)
-            'username' => env('ELASTICSEARCH_USERNAME', null),
-            'password' => env('ELASTICSEARCH_PASSWORD', null),
-            'api_key' => env('ELASTICSEARCH_API_KEY', null),
-            // Operation type: 'index' (default, allows updates) or 'create' (for datastreams, fails if exists)
-            'operation_type' => env('ELASTICSEARCH_OPERATION_TYPE', 'index'),
-            // Document ID: string (field name from footprint, default: 'request_id') or callable
-            // Set a field name like 'request_id' to use that field's value as document ID
-            // For callable functions, set directly in config file (not via env):
-            // 'document_id_field' => function($footprint) { return $footprint['request_id']; }
-            'document_id_field' => env('ELASTICSEARCH_DOCUMENT_ID_FIELD', 'request_id'),
-        ],
-    ],
+        // Socket timeout in milliseconds
+        'timeout_ms' => env('FOOTPRINTS_KAFKA_TIMEOUT_MS', 1000),
+
+        // SASL mechanism: PLAIN, GSSAPI, SCRAM-SHA-256, SCRAM-SHA-512, OAUTHBEARER
+        'sasl_mechanism' => env('FOOTPRINTS_KAFKA_SASL_MECHANISM'),
+
+        // Security protocol: PLAINTEXT, SSL, SASL_PLAINTEXT, SASL_SSL
+        'security_protocol' => env('FOOTPRINTS_KAFKA_SECURITY_PROTOCOL'),
+
+        // SASL Credentials
+        'sasl_username' => env('FOOTPRINTS_KAFKA_SASL_USERNAME'),
+        'sasl_password' => env('FOOTPRINTS_KAFKA_SASL_PASSWORD'),
+
+        // Callable or Closure used to generate the message key for Kafka partitioning
+        'message_key_func' => env('FOOTPRINTS_KAFKA_MESSAGE_KEY_FUNC', 'TNM\Footprints\Utils\getDefaultEventKey')(...),
+    ]
 ];
