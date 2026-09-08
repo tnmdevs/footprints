@@ -2,32 +2,35 @@
 
 namespace TNM\Footprints\Tests;
 
-use CreateFootprintsTable;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use TNM\Footprints\Providers\FootprintServiceProvider;
+use Orchestra\Testbench\TestCase as OrchestraTestCase;
+use TNM\Footprints\Providers\ServiceProvider;
 
-class TestCase extends \Orchestra\Testbench\TestCase
+abstract class TestCase extends OrchestraTestCase
 {
-    use RefreshDatabase;
-
-    public function setUp(): void
-    {
-        parent::setUp();
-        // additional setup
-    }
-
     protected function getPackageProviders($app): array
     {
         return [
-            FootprintServiceProvider::class,
+            ServiceProvider::class,
         ];
     }
 
-    protected function getEnvironmentSetUp($app)
+    protected function defineEnvironment($app): void
     {
-        include_once __DIR__ . '/../database/migrations/create_footprints_table.php';
+        $app['config']->set('database.default', 'testing');
+        $app['config']->set('database.connections.testing', [
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+            'prefix' => '',
+        ]);
 
-        // run the up() method of that migration class
-        (new CreateFootprintsTable())->up();
+        $app['config']->set('footprints.enabled', true);
+        $app['config']->set('footprints.table_name', 'application_footprints');
+        $app['config']->set('footprints.queue.connection', 'sync');
+        $app['config']->set('footprints.queue.name', 'default');
+    }
+
+    protected function defineDatabaseMigrations(): void
+    {
+        $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
     }
 }
