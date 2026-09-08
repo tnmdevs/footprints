@@ -92,7 +92,7 @@ class FootprintWorkerTest extends TestCase
     public function test_fail_method_inserts_exception_into_database(): void
     {
         $worker = new FootprintWorker($this->sampleFootprint);
-        $worker->fail(new RuntimeException('Queue worker failed unexpectedly'));
+        $worker->failed(new RuntimeException('Queue worker failed unexpectedly'));
 
         $record = DB::table('application_footprints')->where('request_id', 'req-12345-abc')->first();
 

@@ -21,9 +21,10 @@ class FootprintWorker implements ShouldQueue
 
     }
 
-    public function fail(Throwable $exception = null): void
+    public function failed(?Throwable $exception): void
     {
-        $this->logToDatabase($exception->getMessage());
+        $message = $exception?->getMessage() ?? 'Unknown failure';
+        $this->logToDatabase($message);
     }
 
     public function handle(): void
