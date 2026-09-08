@@ -5,7 +5,6 @@ namespace TNM\Footprints\Utils;
 use Exception;
 use Illuminate\Support\Facades\Log;
 use Throwable;
-use function Laravel\Prompts\error;
 
 class KafkaLog
 {
@@ -136,8 +135,7 @@ class KafkaLog
         $result = $producer->flush(30000);
 
         if ($result !== RD_KAFKA_RESP_ERR_NO_ERROR) {
-            Logger:
-            error("Kafka failed to produce event with error code: {$result}");
+            Log::error("Kafka failed to produce event with error code: {$result}");
         }
     }
 

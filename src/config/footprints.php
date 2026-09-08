@@ -26,7 +26,7 @@ return [
     */
     'queue' => [
         'connection' => env('FOOTPRINTS_QUEUE_CONNECTION', env('QUEUE_CONNECTION', 'database')),
-        'queue' => env('FOOTPRINTS_QUEUE_NAME', 'default'),
+        'name' => env('FOOTPRINTS_QUEUE_NAME', 'default'),
     ],
 
     /*
@@ -78,6 +78,6 @@ return [
         'sasl_password' => env('FOOTPRINTS_KAFKA_SASL_PASSWORD'),
 
         // Callable or Closure used to generate the message key for Kafka partitioning
-        'message_key_func' => env('FOOTPRINTS_KAFKA_MESSAGE_KEY_FUNC', 'TNM\Footprints\Utils\getDefaultEventKey')(...),
+        'message_key_func' => env('FOOTPRINTS_KAFKA_MESSAGE_KEY_FUNC', 'TNM\Footprints\Utils\getDefaultEventKey'),
     ]
 ];
